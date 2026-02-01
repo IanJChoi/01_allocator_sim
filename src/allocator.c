@@ -1,6 +1,7 @@
 #include "allocator.h"
 
 #include <stdint.h>
+#include <stdio.h>
 
 // 4MB simulated heap, allocated upfront.
 enum { SIM_HEAP_SIZE = 4 * 1024 * 1024 };
@@ -61,5 +62,33 @@ void mm_free(void *bp) {
     (void)bp;
 }
 
-void print_heap_layout(void) {
+void print_heap_layout_mm_init(void) {
+    printf(
+        "Heap Layout (total = 32 bytes)\n"
+        "-----------------------------------------\n"
+        "%p  8B, pad\n"
+        "%p  8B, prologue header  [size=16 | 1]\n"
+        "%p  8B, prologue footer  [size=16 | 1]\n"
+        "%p  8B, epilogue header  [size=0  | 1]\n"
+        "-----------------------------------------\n"
+        "heap_listp -> %p\n",
+        (void *)(heap_start + (0 * WSIZE)),
+        (void *)(heap_start + (1 * WSIZE)),
+        (void *)(heap_start + (2 * WSIZE)),
+        (void *)(heap_start + (3 * WSIZE)),
+        (void *)heap_listp
+    );
+}
+
+
+void init_print(void) {
+    printf(
+        "This program demonstrates how a memory allocator works by visualizing the memory layout.\n"
+        "It uses a 4MB simulated heap, which is extended in 4KB increments.\n"
+        "The allocator assumes a 64-bit system with 16-byte alignment.\n"
+        "Each block contains an 8-byte header and an 8-byte footer.\n"
+        "\n"
+        "Below is the initial state of the memory:\n"
+        "\n"
+    );
 }
