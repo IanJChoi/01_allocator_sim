@@ -14,16 +14,6 @@ static uint8_t *heap_brk = NULL;
 static uint8_t *heap_max = NULL;
 static uint8_t *heap_listp = NULL;
 
-typedef struct {
-    uint64_t size : 63;
-    uint64_t alloc : 1;
-} header_t;
-
-typedef struct {
-    uint64_t size : 63;
-    uint64_t alloc : 1;
-} footer_t;
-
 static void write_header(void *p, size_t size, int alloc) {
     header_t *h = (header_t *)p;
     h->size = size;
@@ -85,12 +75,27 @@ void *mm_heap_listp(void) {
     return (void *)heap_listp;
 }
 
+header_t *get_header(void *payload) {
+    if (payload == NULL) {
+        return NULL;
+    }
+    return (header_t *)((uint8_t *)payload - WSIZE);
+}
+
+footer_t *get_footer(void *payload) {
+    if (payload == NULL) {
+        return NULL;
+    }
+    header_t *h = get_header(payload);
+    size_t size = (size_t)h->size;
+    return (footer_t *)((uint8_t *)payload + size - DSIZE);
+}
+
 void print_heap_layout_mm_init(void) {
     size_t total_bytes = 4 * (size_t)WSIZE;
-    size_t word_bytes = (size_t)WSIZE;
-    size_t pro_size = (size_t)DSIZE;
-    size_t epi_size = 0;
-    int alloc = 1;
+    header_t *header = get_header(heap_listp);
+    footer_t *footer = get_footer(heap_listp);
+    uint8_t *padding = (uint8_t *)header - WSIZE;
 
     printf(
         "Heap Layout (total = %zu bytes)\n"
@@ -102,11 +107,12 @@ void print_heap_layout_mm_init(void) {
         "------------------------------------------------\n"
         "heap_listp -> %p\n",
         total_bytes,
-        (void *)(heap_start + (0 * WSIZE)), word_bytes,
-        (void *)(heap_start + (1 * WSIZE)), word_bytes, pro_size, alloc,
-        (void *)(heap_start + (2 * WSIZE)), word_bytes, pro_size, alloc,
-        (void *)(heap_start + (3 * WSIZE)), word_bytes, epi_size, alloc,
-        (void *)heap_listp
+        padding, (size_t)WSIZE,
+        header, (size_t)WSIZE, (size_t)header->size, (int)header->alloc,
+        footer, (size_t)WSIZE, (size_t)footer->size, (int)footer->alloc,
+        (uint8_t *)footer + WSIZE, (size_t)WSIZE, (size_t)0, 1,
+        heap_listp,
+        "\n"
     );
 }
 
