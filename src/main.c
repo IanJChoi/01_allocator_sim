@@ -9,6 +9,6 @@ int main(void) {
     }
 
     init_print();
-    print_heap_layout_mm_init();
+    print_heap_layout();
     return 0;
 }

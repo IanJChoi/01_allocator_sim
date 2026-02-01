@@ -17,10 +17,13 @@ typedef struct {
     uint64_t alloc : 1;
 } footer_t;
 
-void print_heap_layout_mm_init(void);
+void print_heap_layout(void);
 void init_print(void);
 void *mm_heap_listp(void);
 header_t *get_header(void *payload);
 footer_t *get_footer(void *payload);
+void *extend_heap(void);
+void *next_payload(void *payload);
+void *prev_payload(void *payload);
 
 #endif

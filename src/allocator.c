@@ -44,6 +44,40 @@ static void *mem_sbrk(size_t incr) {
     return old_brk;
 }
 
+void *extend_heap(void) {
+    void *old_brk = mem_sbrk(CHUNK_SIZE);
+    if (old_brk == (void *)-1) {
+        return (void *)-1;
+    }
+
+    void *payload = old_brk;
+    size_t free_size = (size_t)CHUNK_SIZE;
+
+    write_header(get_header(payload), free_size, 0);
+    write_footer(get_footer(payload), free_size, 0);
+    write_header((uint8_t *)get_header(payload) + free_size, 0, 1);
+
+    return payload;
+}
+
+void *next_payload(void *payload) {
+    if (payload == NULL) {
+        return NULL;
+    }
+    header_t *h = get_header(payload);
+    size_t size = (size_t)h->size;
+    return (void *)((uint8_t *)payload + size);
+}
+
+void *prev_payload(void *payload) {
+    if (payload == NULL) {
+        return NULL;
+    }
+    footer_t *prev_footer = (footer_t *)((uint8_t *)get_header(payload) - WSIZE);
+    size_t size = (size_t)prev_footer->size;
+    return (void *)((uint8_t *)payload - size);
+}
+
 int mm_init(void) {
     mem_init();
 
@@ -58,6 +92,10 @@ int mm_init(void) {
     write_header(heap_start + (3 * WSIZE), 0, 1);              // epilogue header
 
     heap_listp = heap_start + (2 * WSIZE);
+
+    if (extend_heap() == (void *)-1) {
+        return -1;
+    }
 
     return 0;
 }
@@ -91,11 +129,57 @@ footer_t *get_footer(void *payload) {
     return (footer_t *)((uint8_t *)payload + size - DSIZE);
 }
 
+static void print_block(void *p) {
+    if (p == NULL) {
+        return;
+    }
+
+    header_t *h = get_header(p);
+    footer_t *f = get_footer(p);
+    size_t size = (size_t)h->size;
+    int alloc = (int)h->alloc;
+    size_t payload_size = size >= (size_t)DSIZE ? size - (size_t)DSIZE : 0;
+
+    printf(
+        "%p  %zuB, header  [size=%zu | %d]\n"
+        "%p  %zuB, payload\n"
+        "%p  %zuB, footer  [size=%zu | %d]\n",
+        (void *)h, (size_t)WSIZE, size, alloc,
+        (void *)p, payload_size,
+        (void *)f, (size_t)WSIZE, (size_t)f->size, (int)f->alloc
+    );
+}
+
+void print_heap_layout(void) {
+    void *p = heap_listp;
+    printf("------------------------------------------------\n");
+    while (p != NULL) {
+        header_t *h = get_header(p);
+        if (h == NULL) {
+            break;
+        }
+        if (h->size == 0) {
+            break;
+        }
+        print_block(p);
+        p = next_payload(p);
+    }
+    printf("------------------------------------------------\n");
+}
+
 void print_heap_layout_mm_init(void) {
-    size_t total_bytes = 4 * (size_t)WSIZE;
-    header_t *header = get_header(heap_listp);
-    footer_t *footer = get_footer(heap_listp);
-    uint8_t *padding = (uint8_t *)header - WSIZE;
+    size_t total_bytes = (4 * (size_t)WSIZE) + (size_t)CHUNK_SIZE;
+    void *pro_payload = heap_listp;
+    header_t *pro_header = get_header(pro_payload);
+    footer_t *pro_footer = get_footer(pro_payload);
+    uint8_t *padding = (uint8_t *)pro_header - WSIZE;
+
+    void *free_payload = next_payload(pro_payload);
+    header_t *free_header = get_header(free_payload);
+    footer_t *free_footer = get_footer(free_payload);
+    size_t free_size = (size_t)free_header->size;
+    size_t free_payload_size = free_size - (size_t)DSIZE;
+    header_t *new_epilogue = (header_t *)((uint8_t *)free_header + free_size);
 
     printf(
         "Heap Layout (total = %zu bytes)\n"
@@ -103,16 +187,21 @@ void print_heap_layout_mm_init(void) {
         "%p  %zuB, padding\n"
         "%p  %zuB, prologue header  [size=%zu | %d]\n"
         "%p  %zuB, prologue footer  [size=%zu | %d]\n"
+        "%p  %zuB, free header      [size=%zu | %d]\n"
+        "%p  %zuB, free payload\n"
+        "%p  %zuB, free footer      [size=%zu | %d]\n"
         "%p  %zuB, epilogue header  [size=%zu  | %d]\n"
         "------------------------------------------------\n"
         "heap_listp -> %p\n",
         total_bytes,
         padding, (size_t)WSIZE,
-        header, (size_t)WSIZE, (size_t)header->size, (int)header->alloc,
-        footer, (size_t)WSIZE, (size_t)footer->size, (int)footer->alloc,
-        (uint8_t *)footer + WSIZE, (size_t)WSIZE, (size_t)0, 1,
-        heap_listp,
-        "\n"
+        pro_header, (size_t)WSIZE, (size_t)pro_header->size, (int)pro_header->alloc,
+        pro_footer, (size_t)WSIZE, (size_t)pro_footer->size, (int)pro_footer->alloc,
+        free_header, (size_t)WSIZE, free_size, (int)free_header->alloc,
+        (uint8_t *)free_payload, free_payload_size,
+        free_footer, (size_t)WSIZE, (size_t)free_footer->size, (int)free_footer->alloc,
+        new_epilogue, (size_t)WSIZE, (size_t)new_epilogue->size, (int)new_epilogue->alloc,
+        heap_listp
     );
 }
 
