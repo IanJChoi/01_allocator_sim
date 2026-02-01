@@ -14,8 +14,27 @@ static uint8_t *heap_brk = NULL;
 static uint8_t *heap_max = NULL;
 static uint8_t *heap_listp = NULL;
 
-#define PACK(size, alloc) ((size) | (alloc))
-#define PUT(p, val) (*(uint64_t *)(p) = (uint64_t)(val))
+typedef struct {
+    uint64_t size : 63;
+    uint64_t alloc : 1;
+} header_t;
+
+typedef struct {
+    uint64_t size : 63;
+    uint64_t alloc : 1;
+} footer_t;
+
+static void write_header(void *p, size_t size, int alloc) {
+    header_t *h = (header_t *)p;
+    h->size = size;
+    h->alloc = alloc ? 1 : 0;
+}
+
+static void write_footer(void *p, size_t size, int alloc) {
+    footer_t *f = (footer_t *)p;
+    f->size = size;
+    f->alloc = alloc ? 1 : 0;
+}
 
 static void mem_init(void) {
     if (heap_start != NULL) {
@@ -43,10 +62,10 @@ int mm_init(void) {
         return -1;
     }
 
-    PUT(heap_start, 0);                                // padding
-    PUT(heap_start + (1 * WSIZE), PACK(DSIZE, 1));     // prologue header
-    PUT(heap_start + (2 * WSIZE), PACK(DSIZE, 1));     // prologue footer
-    PUT(heap_start + (3 * WSIZE), PACK(0, 1));         // epilogue header
+    *(uint64_t *)heap_start = 0;                               // padding
+    write_header(heap_start + (1 * WSIZE), DSIZE, 1);          // prologue header
+    write_footer(heap_start + (2 * WSIZE), DSIZE, 1);          // prologue footer
+    write_header(heap_start + (3 * WSIZE), 0, 1);              // epilogue header
 
     heap_listp = heap_start + (2 * WSIZE);
 
@@ -62,20 +81,31 @@ void mm_free(void *bp) {
     (void)bp;
 }
 
+void *mm_heap_listp(void) {
+    return (void *)heap_listp;
+}
+
 void print_heap_layout_mm_init(void) {
+    size_t total_bytes = 4 * (size_t)WSIZE;
+    size_t word_bytes = (size_t)WSIZE;
+    size_t pro_size = (size_t)DSIZE;
+    size_t epi_size = 0;
+    int alloc = 1;
+
     printf(
-        "Heap Layout (total = 32 bytes)\n"
-        "-----------------------------------------\n"
-        "%p  8B, pad\n"
-        "%p  8B, prologue header  [size=16 | 1]\n"
-        "%p  8B, prologue footer  [size=16 | 1]\n"
-        "%p  8B, epilogue header  [size=0  | 1]\n"
-        "-----------------------------------------\n"
+        "Heap Layout (total = %zu bytes)\n"
+        "------------------------------------------------\n"
+        "%p  %zuB, padding\n"
+        "%p  %zuB, prologue header  [size=%zu | %d]\n"
+        "%p  %zuB, prologue footer  [size=%zu | %d]\n"
+        "%p  %zuB, epilogue header  [size=%zu  | %d]\n"
+        "------------------------------------------------\n"
         "heap_listp -> %p\n",
-        (void *)(heap_start + (0 * WSIZE)),
-        (void *)(heap_start + (1 * WSIZE)),
-        (void *)(heap_start + (2 * WSIZE)),
-        (void *)(heap_start + (3 * WSIZE)),
+        total_bytes,
+        (void *)(heap_start + (0 * WSIZE)), word_bytes,
+        (void *)(heap_start + (1 * WSIZE)), word_bytes, pro_size, alloc,
+        (void *)(heap_start + (2 * WSIZE)), word_bytes, pro_size, alloc,
+        (void *)(heap_start + (3 * WSIZE)), word_bytes, epi_size, alloc,
         (void *)heap_listp
     );
 }
@@ -83,6 +113,7 @@ void print_heap_layout_mm_init(void) {
 
 void init_print(void) {
     printf(
+        "\n"
         "This program demonstrates how a memory allocator works by visualizing the memory layout.\n"
         "It uses a 4MB simulated heap, which is extended in 4KB increments.\n"
         "The allocator assumes a 64-bit system with 16-byte alignment.\n"
