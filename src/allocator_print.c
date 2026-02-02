@@ -11,6 +11,7 @@ static void print_block(void *p) {
     footer_t *f = get_footer(p);
     size_t size = (size_t)h->size;
     int alloc = (int)h->alloc;
+    unsigned int tag = (unsigned int)h->tag;
     size_t payload_size = size >= (size_t)DSIZE ? size - (size_t)DSIZE : 0;
     char header_sz[16];
     char payload_sz[16];
@@ -21,12 +22,12 @@ static void print_block(void *p) {
     snprintf(footer_sz, sizeof(footer_sz), "%zuB", (size_t)WSIZE);
 
     printf(
-        "%p %6s %-7s [size=%zu | %d]\n"
+        "%p %6s %-7s [size=%zu | alloc=%d | tag=%u]\n"
         "%p %6s %-7s\n"
-        "%p %6s %-7s [size=%zu | %d]\n",
-        (void *)h, header_sz, "header", size, alloc,
+        "%p %6s %-7s [size=%zu | alloc=%d | tag=%u]\n",
+        (void *)h, header_sz, "header", size, alloc, tag,
         (void *)p, payload_sz, "payload",
-        (void *)f, footer_sz, "footer", (size_t)f->size, (int)f->alloc
+        (void *)f, footer_sz, "footer", (size_t)f->size, (int)f->alloc, (unsigned int)f->tag
     );
 }
 

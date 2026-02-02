@@ -1,14 +1,16 @@
 #include "allocator_internal.h"
 
-void write_header(void *p, size_t size, int alloc) {
+void write_header(void *p, size_t size, int alloc, int tag) {
     header_t *h = (header_t *)p;
     h->size = size;
+    h->tag = (uint64_t)(tag & 0x3);
     h->alloc = alloc ? 1 : 0;
 }
 
-void write_footer(void *p, size_t size, int alloc) {
+void write_footer(void *p, size_t size, int alloc, int tag) {
     footer_t *f = (footer_t *)p;
     f->size = size;
+    f->tag = (uint64_t)(tag & 0x3);
     f->alloc = alloc ? 1 : 0;
 }
 

@@ -18,7 +18,7 @@ extern uint8_t *heap_listp;
 void mem_init(void);
 void *mem_sbrk(size_t incr);
 
-void write_header(void *p, size_t size, int alloc);
-void write_footer(void *p, size_t size, int alloc);
+void write_header(void *p, size_t size, int alloc, int tag);
+void write_footer(void *p, size_t size, int alloc, int tag);
 
 #endif

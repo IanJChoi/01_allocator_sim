@@ -8,12 +8,14 @@ int mm_init(void);
 void *mm_malloc(size_t size);
 void mm_free(void *bp);
 typedef struct {
-    uint64_t size : 63;
+    uint64_t size : 61;
+    uint64_t tag : 2;
     uint64_t alloc : 1;
 } header_t;
 
 typedef struct {
-    uint64_t size : 63;
+    uint64_t size : 61;
+    uint64_t tag : 2;
     uint64_t alloc : 1;
 } footer_t;
 
