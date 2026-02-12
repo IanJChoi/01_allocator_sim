@@ -4,8 +4,6 @@ A terminal-based memory allocator simulator that visualizes heap layout changes 
 This program is designed to help understand how a typical implicit free-list allocator works
 at a low level (headers, footers, alignment, splitting, and coalescing).
 
----
-
 ## Overview
 
 This simulator mimics a simplified `malloc` / `free` implementation on a **64-bit system**.
@@ -15,8 +13,6 @@ the memory layout after every operation.
 The focus is clarity over performance:  
 you can see exactly how blocks are laid out in memory and how they change over time.
 
----
-
 ## Motivation
 
 This project was built to deepen understanding of:
@@ -25,8 +21,6 @@ This project was built to deepen understanding of:
 - Why allocators use headers and footers
 - How fragmentation occurs
 - How coalescing restores large free blocks
-
----
 
 ## Key Assumptions
 
@@ -38,8 +32,6 @@ This project was built to deepen understanding of:
   - 8-byte footer
 - Boundary-tag method (headers + footers)
 - First-fit placement strategy
-
----
 
 ## Heap Model
 
@@ -53,8 +45,6 @@ This project was built to deepen understanding of:
 
 Initial logical layout:
 padding | prologue | free block | epilogue
-
----
 
 ## Build, Run, Clean
 
